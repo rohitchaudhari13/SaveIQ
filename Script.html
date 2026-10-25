@@ -1,0 +1,173 @@
+<script>
+function openGoalModal() {
+  document.getElementById('goalModal').style.display = 'flex';
+}
+
+function closeGoalModal() {
+  document.getElementById('goalModal').style.display = 'none';
+}
+
+function createGoal() {
+  var name = document.getElementById('goalName').value.trim();
+  var target = Number(document.getElementById('targetAmount').value);
+  var saved = Number(document.getElementById('savedAmount').value);
+  var deadline = document.getElementById('deadline').value;
+  var category = document.getElementById('category').value;
+
+  if (!name) {
+    alert('Please enter a goal name.');
+    return;
+  }
+
+  if (target <= 0) {
+    alert('Please enter a target amount.');
+    return;
+  }
+
+  if (saved < 0) {
+    alert('Saved amount cannot be negative.');
+    return;
+  }
+
+  google.script.run
+    .withSuccessHandler(function(goalId) {
+      closeGoalModal();
+      document.getElementById('goalName').value = '';
+      document.getElementById('targetAmount').value = '';
+      document.getElementById('savedAmount').value = '0';
+      document.getElementById('deadline').value = '';
+
+      alert('Goal created successfully!');
+      loadDashboard();
+    })
+    .withFailureHandler(function(error) {
+      alert('Could not create the goal.\n\n' + error.message);
+    })
+    .createGoal({
+      name: name,
+      targetAmount: target,
+      savedAmount: saved,
+      deadline: deadline,
+      category: category
+    });
+}
+
+function showAIMessage() {
+  alert('AI Insights will be connected after the core savings system is ready.');
+}
+
+function formatCurrency(value) {
+  return '₹' + Number(value || 0).toLocaleString('en-IN');
+}
+
+function loadDashboard() {
+  google.script.run
+    .withSuccessHandler(function(data) {
+      if (!data) return;
+
+      document.getElementById('totalGoals').textContent = data.totalGoals || 0;
+      document.getElementById('totalSaved').textContent = formatCurrency(data.totalSaved);
+      document.getElementById('totalTarget').textContent = formatCurrency(data.totalTarget);
+
+      var progress = Number(data.progress || 0);
+
+      document.getElementById('overallProgress').textContent = progress + '%';
+      document.getElementById('progressCircle').textContent = progress + '%';
+      document.getElementById('circleSaved').textContent = formatCurrency(data.totalSaved);
+
+      var remaining = Math.max(
+        0,
+        Number(data.totalTarget || 0) - Number(data.totalSaved || 0)
+      );
+
+      document.getElementById('circleRemaining').textContent = formatCurrency(remaining);
+      updateProgressRing(progress);
+      renderGoals(data.goals || []);
+    })
+    .withFailureHandler(function(error) {
+      console.log('Dashboard error:', error);
+    })
+    .getDashboardData();
+}
+
+function updateProgressRing(progress) {
+  var ring = document.querySelector('.progress-ring');
+
+  if (!ring) return;
+
+  var degrees = Math.min(100, Math.max(0, progress)) * 3.6;
+
+  ring.style.background =
+    'conic-gradient(#10b981 ' +
+    degrees +
+    'deg, #edf1f5 ' +
+    degrees +
+    'deg)';
+}
+
+function renderGoals(goals) {
+  var container = document.getElementById('goalsContainer');
+
+  if (!goals.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">🎯</div>
+        <h3>No goals yet</h3>
+        <p>Create your first savings goal to get started.</p>
+        <button class="primary-button" onclick="openGoalModal()">
+          Create your first goal
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = '';
+
+  goals.forEach(function(goal) {
+    var target = Number(goal.targetAmount || 0);
+    var saved = Number(goal.savedAmount || 0);
+
+    var progress = target > 0
+      ? Math.min(100, Math.round((saved / target) * 100))
+      : 0;
+
+    var card = document.createElement('div');
+    card.className = 'goal-card';
+
+    card.innerHTML = `
+      <div class="goal-top">
+        <div>
+          <div class="goal-name">${escapeHtml(goal.name)}</div>
+          <div class="goal-category">${escapeHtml(goal.category || 'General')}</div>
+        </div>
+        <div class="goal-percent">${progress}%</div>
+      </div>
+
+      <div class="progress-track">
+        <div class="progress-fill" style="width:${progress}%"></div>
+      </div>
+
+      <div class="goal-details">
+        <span>${formatCurrency(saved)} saved</span>
+        <span>Target ${formatCurrency(target)}</span>
+      </div>
+    `;
+
+    container.appendChild(card);
+  });
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+window.addEventListener('load', function() {
+  loadDashboard();
+});
+</script>
