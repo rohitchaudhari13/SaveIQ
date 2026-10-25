@@ -148,3 +148,9 @@ Add the `SPREADSHEET_ID` Script Property in Project Settings and verify that its
 ## License
 
 No license is specified in the supplied project. Add a `LICENSE` file before distributing or reusing the project if you want to define its usage terms.
+
+ 
+## Project Documentation
+
+Click below to view the complete project documentation.
+[View Project Documentation] (https://docs.google.com/document/d/1b5_ZJF5SpX8GdnBcRqxK6Aa9TH2WzVai/edit?usp=drivesdk&ouid=117365420087393141715&rtpof=true&sd=true)
